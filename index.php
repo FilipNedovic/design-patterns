@@ -355,6 +355,7 @@ clientCode(new PostgresQUeryBuilder());
  * Your code shouldn’t create the template objects directly, but delegate their creation to special factory objects.
  * Finally, your code shouldn’t depend on the factory objects either but, instead, should work with them via the abstract factory interface.
  * As a result, you will be able to provide the app with the factory object that corresponds to one of the rendering engines.
+ * 
  * All templates, created in the app, will be created by that factory and their type will match the type of the factory.
  * If you decide to change the rendering engine, you’ll be able to pass a new factory to the client code, without breaking any existing code.
  */
@@ -586,3 +587,117 @@ echo $page->render(new PHPTemplateFactory());
 
 // echo nl2br("Testing rendering with the Twig factory:\n");
 // echo $page->render(new TwigTemplateFactory());
+
+
+/**
+ * The Prototype pattern provides a convenient way of replicating existing objects instead of trying
+ * to reconstruct the objects by copying all of their fields directly.
+ * The direct approach not only couples you to the classes of the objects being cloned,
+ * but also doesn’t allow you to copy the contents of the private fields.
+ * The Prototype pattern lets you perform the cloning within the context of the cloned class,
+ * where the access to the class’ private fields isn’t restricted.
+ * 
+ * This example shows you how to clone a complex Page object using the Prototype pattern.
+ * The Page class has lots of private fields, which will be carried over to the cloned object thanks to the Prototype pattern.
+ */
+
+namespace Prototype;
+
+/**
+ * Prototype.
+ */
+class Page
+{
+    private $title;
+    private $body;
+
+    /**
+     * @var Author
+     */
+    private $author;
+
+    private $comments = [];
+
+    /**
+     * @var \DateTime
+     */
+    private $date;
+
+    // +100 private fields.
+
+    public function __construct(string $title, string $body, Author $author)
+    {
+        $this->title = $title;
+        $this->body = $body;
+        $this->author = $author;
+        $this->author->addToPage($this);
+        $this->date = new \DateTime();
+    }
+
+    public function addComment(string $comment): void
+    {
+        $this->comments[] = $comment;
+    }
+
+    /**
+     * You can control what data you want to carry over to the cloned object.
+     *
+     * For instance, when a page is cloned:
+     * - It gets a new "Copy of ..." title.
+     * - The author of the page remains the same. Therefore we leave the
+     * reference to the existing object while adding the cloned page to the list
+     * of the author's pages.
+     * - We don't carry over the comments from the old page.
+     * - We also attach a new date object to the page.
+     */
+    public function __clone()
+    {
+        $this->title = "Copy of " . $this->title;
+        $this->author->addToPage($this);
+        $this->comments = [];
+        $this->date = new \DateTime;
+    }
+}
+
+class Author
+{
+    private $name;
+
+    /**
+     * @var Page[]
+     */
+    private $pages = [];
+
+    public function __construct(string $name)
+    {
+        $this->name = $name;
+    }
+
+    public function addToPage(Page $page): void
+    {
+        $this->pages[] = $page;
+    }
+}
+
+/**
+ * The client code.
+ */
+function clientCode()
+{
+    $author = new Author("Mile Kitic");
+    $page = new Page("Tip of the day", "Keep calm and carry on.", $author);
+
+    // ...
+
+    $page->addComment("Nice tip, thanks!");
+
+    // ...
+
+    $draft = clone $page;
+
+    echo nl2br("\n\n");
+    echo nl2br("Dump of the clone. Note that the author is now referencing two objects.\n\n");
+    print_r($draft);
+}
+
+clientCode();
